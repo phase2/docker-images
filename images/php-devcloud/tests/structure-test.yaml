@@ -1,0 +1,51 @@
+# container-structure-test: php-devcloud specifics. The runtime contract (FPM, sudo, runuser,
+# overrides, nvm) is exercised end to end by tests/compat-test.sh.
+schemaVersion: 2.0.0
+
+metadataTest:
+  exposedPorts: ["9000"]
+  entrypoint: ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint"]
+  cmd: ["php-fpm"]
+
+commandTests:
+  - name: php-fpm config is valid (and is the default config)
+    command: php-fpm
+    args: ["--test"]
+    expectedError: ["test is successful"]
+  - name: docker has passwordless sudo
+    command: bash
+    args: ["-c", "sudo -l -U docker"]
+    expectedOutput: ["NOPASSWD: ALL"]
+  - name: runuser present
+    command: runuser
+    args: ["--version"]
+    expectedOutput: ["util-linux"]
+  - name: mysql client
+    command: mysql
+    args: ["--version"]
+    expectedOutput: ["MariaDB"]
+  - name: pod tools
+    command: bash
+    args: ["-c", "echo mysqldump msmtp convert gs sqlite3 pv gcc g++ make python3 cwebp sudo | xargs -n1 which >/dev/null && echo ALL_PRESENT"]
+    expectedOutput: ["ALL_PRESENT"]
+  - name: no kube or cloud tools
+    command: bash
+    args: ["-c", "command -v kubectl helm kustomize aws || echo NONE"]
+    expectedOutput: ["^NONE"]
+  - name: systemd not installed
+    command: bash
+    args: ["-c", "dpkg -s systemd >/dev/null 2>&1 && echo INSTALLED || echo ABSENT"]
+    expectedOutput: ["ABSENT"]
+
+fileExistenceTests:
+  - name: entrypoint
+    path: /usr/local/bin/docker-entrypoint
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+    uid: 0
+    gid: 0
+  - name: runtime dir writable by docker
+    path: /run/php-runtime/conf.d
+    shouldExist: true
+    uid: 1000
+    gid: 1000

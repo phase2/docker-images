@@ -1,0 +1,176 @@
+# Lint -> test (every variant on amd64 and arm64) -> publish (multi-arch, SBOM, provenance, signing).
+# Every action is pinned by full commit SHA (version in the trailing comment); Renovate keeps
+# them current. The weekly run rebuilds without cache so Debian security fixes land hands-off.
+name: images
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 16 * * 0" # weekly rebuild + rescan
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  BUILDX_VERSION: v0.38.1
+  BUILDKIT_IMAGE: moby/buildkit:v0.34.1
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      variants: ${{ steps.variants.outputs.json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # gitleaks scans full history
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          version: ${{ env.BUILDX_VERSION }}
+          driver-opts: image=${{ env.BUILDKIT_IMAGE }}
+          cache-binary: false
+      # Host tools from mise.toml, verified against the checksums in mise.lock (--locked).
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          install_args: shellcheck
+      - name: hadolint, shellcheck, BuildKit checks
+        run: make lint BUILDER=
+      - name: actionlint, gitleaks
+        run: make repo-lint
+      # The published variants, read from docker-bake.hcl (its single source): target, image
+      # directory, and channel (the moving tag).
+      - name: variants
+        id: variants
+        shell: bash
+        run: |
+          variants="$(docker buildx bake --print default | jq -c '[.target | to_entries[]
+            | select(.value.tags) | {target: .key, image: (.value.context | ltrimstr("images/")),
+              channel: (.value.tags[0] | split(":")[-1])}] | sort_by(.target)')"
+          echo "json=${variants}" >> "${GITHUB_OUTPUT}"
+
+  test:
+    name: test ${{ matrix.variant.target }} (${{ matrix.arch }})
+    needs: lint
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
+    permissions:
+      contents: read
+      security-events: write # Trivy SARIF -> code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        variant: ${{ fromJSON(needs.lint.outputs.variants) }}
+    env:
+      # Read by make: IMAGE and PHP pick the bake target (PHP is ignored for ci-tools).
+      IMAGE: ${{ matrix.variant.image }}
+      PHP: ${{ matrix.variant.channel }}
+      BUILDER: ""
+      PLATFORM: linux/${{ matrix.arch }}
+      TAG: local/test:ci
+      REPORT: trivy-${{ matrix.variant.target }}-${{ matrix.arch }}.sarif
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          version: ${{ env.BUILDX_VERSION }}
+          driver-opts: image=${{ env.BUILDKIT_IMAGE }}
+          cache-binary: false
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
+        with:
+          install_args: container-structure-test
+      - name: build
+        run: make build
+      - name: structure + compatibility tests
+        run: make test
+      - name: Trivy gate (fixable OS-package HIGH/CRITICAL)
+        run: make scan
+      - name: Trivy SARIF report, all package types (non-blocking)
+        if: always()
+        continue-on-error: true
+        run: make scan-sarif SARIF="${REPORT}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: ${{ env.REPORT }}
+          path: ${{ env.REPORT }}
+          if-no-files-found: ignore
+      # Code scanning, one category per variant and arch. Fork PRs get a read-only token, so skip them.
+      - uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        if: >-
+          always() && hashFiles(env.REPORT) != '' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        continue-on-error: true
+        with:
+          sarif_file: ${{ env.REPORT }}
+          category: trivy-${{ matrix.variant.target }}-${{ matrix.arch }}
+
+  # The single required status check for branch protection: the test jobs' names come from
+  # docker-bake.hcl, so a ruleset can't list them. always() makes it fail, not skip, when a
+  # dependency fails (a skipped required check counts as passing).
+  ci:
+    name: ci
+    needs: [lint, test]
+    if: always()
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: lint and every test variant passed
+        env:
+          LINT: ${{ needs.lint.result }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          echo "lint: ${LINT}, test: ${TEST}"
+          [[ "${LINT}" == success && "${TEST}" == success ]]
+
+  publish:
+    # Docker-maintained reusable workflow: native amd64/arm64 runners, SBOM + SLSA provenance
+    # attestations, keyless (Sigstore/OIDC) signing. One bake target per call; tags come from
+    # meta-tags (bake-file tags are for local builds).
+    name: publish ${{ matrix.variant.target }}
+    needs: [lint, test]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: ${{ fromJSON(needs.lint.outputs.variants) }}
+    uses: docker/github-builder/.github/workflows/bake.yml@cbc9d42f8c89a55623392aadd03600965b80e963 # v1.18.1
+    permissions:
+      contents: read
+      packages: write # push to ghcr.io
+      id-token: write # keyless signing via GitHub OIDC
+    with:
+      output: image
+      push: true
+      target: ${{ matrix.variant.target }}
+      files: docker-bake.hcl
+      sbom: true
+      # The weekly run rebuilds from scratch so apt picks up Debian security updates.
+      cache: ${{ github.event_name != 'schedule' }}
+      cache-scope: ${{ matrix.variant.target }}
+      meta-images: ghcr.io/${{ github.repository_owner }}/${{ matrix.variant.image }}
+      meta-tags: |
+        type=raw,value=${{ matrix.variant.channel }}
+        type=raw,value=${{ matrix.variant.channel }}-{{date 'YYYYMMDD'}}-{{sha}}
+      # Image labels come from the Dockerfiles (metadata-action's would replace each image's title
+      # and description with the repo's). Annotations add created/revision; title is per image.
+      set-meta-labels: false
+      set-meta-annotations: true
+      meta-annotations: |
+        org.opencontainers.image.title=${{ matrix.variant.image }}
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}

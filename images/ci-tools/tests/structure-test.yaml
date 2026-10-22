@@ -1,0 +1,44 @@
+# container-structure-test: ci-tools (also applied to php-ci, which is built FROM it).
+schemaVersion: 2.0.0
+
+metadataTest:
+  user: "1000:1000"
+  entrypoint: ["/usr/bin/tini", "--"]
+
+commandTests:
+  - name: no privilege escalation tools
+    command: bash
+    args: ["-c", "command -v sudo gosu su-exec doas || echo NONE"]
+    expectedOutput: ["^NONE"]
+  - name: no setuid/setgid binaries
+    command: bash
+    args: ["-c", "find / -xdev -perm /6000 -type f 2>/dev/null; echo END"]
+    expectedOutput: ["^END\\n?$"]
+  - name: kubectl
+    command: kubectl
+    args: ["version", "--client"]
+    expectedOutput: ["Client Version: v1\\."]
+  - name: helm 3
+    command: helm
+    args: ["version", "--short"]
+    expectedOutput: ["^v3\\."]
+  - name: helm3 alias
+    command: helm3
+    args: ["version", "--short"]
+    expectedOutput: ["^v3\\."]
+  - name: kustomize
+    command: kustomize
+    args: ["version"]
+    expectedOutput: ["v5\\."]
+  - name: aws
+    command: aws
+    args: ["--version"]
+    expectedOutput: ["aws-cli/2\\."]
+  - name: htpasswd
+    command: htpasswd
+    args: ["-nbB", "user", "secret"]
+    expectedOutput: ["^user:"]
+  - name: tmate
+    command: tmate
+    args: ["-V"]
+    expectedOutput: ["^tmate "]

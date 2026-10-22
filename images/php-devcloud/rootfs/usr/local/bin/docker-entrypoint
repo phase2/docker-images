@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Entrypoint for php-devcloud: apply runtime PHP settings, then run the command
+# (php-fpm in the foreground when no command is given).
+set -euo pipefail
+
+log() { if [[ "${DEBUG:-0}" != "0" ]]; then printf '%s | %s\n' "$(date +'%F %T')" "$*" >&2; fi; }
+
+RUNTIME_DIR=/run/php-runtime
+OVERRIDES_DIR="${PHP_OVERRIDES_DIR:-}"
+
+if [[ ! -w "${RUNTIME_DIR}/conf.d" || ! -w "${RUNTIME_DIR}/fpm.d" ]]; then
+  printf 'warning: %s not writable for uid %s; skipping runtime PHP settings\n' "${RUNTIME_DIR}" "$(id -u)" >&2
+else
+  rm -f "${RUNTIME_DIR}"/conf.d/* "${RUNTIME_DIR}"/fpm.d/*
+
+  if [[ "${XDEBUG_ENABLED:-0}" != "0" ]]; then
+    cp /usr/local/etc/php/optional/xdebug.ini "${RUNTIME_DIR}/conf.d/50-xdebug.ini"
+    log "xdebug enabled"
+  fi
+
+  # Project overrides, from the directory in PHP_OVERRIDES_DIR (none when it is unset):
+  #   *.ini         PHP settings for the CLI and FPM (symlinked, so CLI picks up edits immediately)
+  #   php-fpm.conf  [www] pool directives, e.g. php_admin_value[memory_limit] = 2048M
+  if [[ -n "${OVERRIDES_DIR}" && -d "${OVERRIDES_DIR}" ]]; then
+    for ini in "${OVERRIDES_DIR}"/*.ini; do
+      [[ -f "${ini}" ]] || continue
+      ln -sf "${ini}" "${RUNTIME_DIR}/conf.d/99-project-${ini##*/}"
+      log "linked ${ini}"
+    done
+    if [[ -f "${OVERRIDES_DIR}/php-fpm.conf" ]]; then
+      { echo '[www]'; cat "${OVERRIDES_DIR}/php-fpm.conf"; } > "${RUNTIME_DIR}/fpm.d/zz-project.conf"
+      log "applied ${OVERRIDES_DIR}/php-fpm.conf"
+    fi
+  fi
+fi
+
+if [[ $# -eq 0 ]]; then
+  set -- php-fpm
+fi
+
+if [[ "$1" == "php-fpm" ]]; then
+  shift
+  if [[ -z "${OVERRIDES_DIR}" ]]; then
+    echo "notice: PHP_OVERRIDES_DIR is not set; no project PHP overrides applied" >&2
+  fi
+  exec /usr/local/sbin/php-fpm --nodaemonize --fpm-config /usr/local/etc/php-fpm/php-fpm.conf "$@"
+fi
+
+exec "$@"

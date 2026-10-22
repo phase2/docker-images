@@ -1,0 +1,15 @@
+# Trivy SARIF reports (make scan-sarif)
+*.sarif
+
+# Per-developer overrides of committed configs
+mise.local.toml
+lefthook-local.yml
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+
+.env

@@ -1,0 +1,3 @@
+# Build context: only the Dockerfile is needed.
+*
+!Dockerfile

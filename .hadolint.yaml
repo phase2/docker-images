@@ -1,0 +1,10 @@
+# hadolint configuration (https://github.com/hadolint/hadolint)
+failure-threshold: warning
+format: tty
+ignored:
+  # Package versions are not pinned: the weekly rebuild picks up Debian security fixes and
+  # Trivy gates the result.
+  - DL3008
+trustedRegistries:
+  - docker.io
+  - ghcr.io

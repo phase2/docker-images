@@ -1,0 +1,81 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits"
+  ],
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "3 days",
+  "vulnerabilityAlerts": { "enabled": true, "schedule": ["at any time"] },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tool versions annotated with '# renovate:' comments (Dockerfile ARGs and shared scripts)",
+      "managerFilePatterns": ["/^images/.+/Dockerfile$/", "/^images/_shared/.+\\.sh$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+) depName=(?<depName>\\S+)(?: versioning=(?<versioning>\\S+))?(?: extractVersion=(?<extractVersion>\\S+))?\\s+(?:ARG )?[A-Z0-9_]+_VERSION=(?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "nvm: pinned by tag and the commit it points to",
+      "managerFilePatterns": ["/^images/base/Dockerfile$/"],
+      "matchStrings": [
+        "# renovate-digest: datasource=(?<datasource>github-tags) depName=(?<depName>nvm-sh/nvm)\\s+ARG NVM_VERSION=(?<currentValue>\\S+)\\s+ARG NVM_COMMIT=(?<currentDigest>[a-f0-9]{40})"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Digest-pinned helper images and the BuildKit image in the Makefile and workflows",
+      "managerFilePatterns": ["/^Makefile$/", "/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "_IMAGE\\s*:?=\\s*(?:docker\\.io/)?(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})",
+        "BUILDKIT_IMAGE\\s*:?=?\\s*(?<depName>moby/buildkit):(?<currentValue>v[^\\s@]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Bake named contexts, not registry images",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["base", "ci-tools"],
+      "enabled": false
+    },
+    {
+      "description": "Base images stay on unpinned tags; the weekly rebuild picks up their updates",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["docker.io/library/debian", "debian"],
+      "enabled": false
+    },
+    {
+      "description": "Tool patch/minor bumps merge on green CI (builds re-verify every download against upstream checksums)",
+      "matchManagers": ["custom.regex", "github-actions", "mise"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pinDigest"],
+      "automerge": true
+    },
+    {
+      "description": "One PR (and one rebuild + publish) for each week's tool bumps",
+      "matchManagers": ["custom.regex", "mise"],
+      "matchUpdateTypes": ["minor", "patch", "digest", "pinDigest"],
+      "groupName": "tool versions"
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    },
+    {
+      "description": "Callers invoke helm3; stay on Helm 3",
+      "matchPackageNames": ["helm/helm"],
+      "allowedVersions": "<4"
+    },
+    {
+      "description": "Node.js: majors are a deliberate LTS choice (and change what `node` means in every image)",
+      "matchPackageNames": ["node"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ]
+}

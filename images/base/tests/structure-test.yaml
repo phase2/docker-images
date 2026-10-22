@@ -1,0 +1,96 @@
+# container-structure-test: what every image built FROM base provides.
+# Note: container-structure-test expands $VARS in args, so checks avoid shell/PHP variables,
+# and busybox-style `command -v a b` passes if any one name exists, so check one tool per test.
+schemaVersion: 2.0.0
+
+metadataTest:
+  workdir: /var/www
+  labels:
+    - key: org.opencontainers.image.source
+      value: https://github.com/phase2/docker-images
+  envVars:
+    - key: NVM_DIR
+      value: /home/docker/.nvm
+
+commandTests:
+  - name: docker user is uid 1000
+    command: id
+    args: ["-u", "docker"]
+    expectedOutput: ["^1000\\n?$"]
+  - name: docker group is gid 1000
+    command: id
+    args: ["-g", "docker"]
+    expectedOutput: ["^1000\\n?$"]
+  - name: node is the default 24 LTS
+    command: node
+    args: ["--version"]
+    expectedOutput: ["^v24\\."]
+  - name: npm
+    command: npm
+    args: ["--version"]
+  - name: yarn 1
+    command: yarn
+    args: ["--version"]
+    expectedOutput: ["^1\\.22\\."]
+  - name: nvm is sourceable
+    command: bash
+    args: ["-c", ". /home/docker/.nvm/nvm.sh && nvm --version"]
+    expectedOutput: ["^0\\.40\\."]
+  - name: nvm default-packages installs yarn
+    command: cat
+    args: ["/home/docker/.nvm/default-packages"]
+    expectedOutput: ["^yarn@1\\."]
+  - name: git
+    command: git
+    args: ["--version"]
+    expectedOutput: ["git version 2\\."]
+  - name: git-lfs
+    command: git-lfs
+    args: ["version"]
+    expectedOutput: ["git-lfs/3\\."]
+  - name: ssh client
+    command: ssh
+    args: ["-V"]
+    expectedError: ["OpenSSH_"]
+  - name: jq
+    command: jq
+    args: ["--version"]
+    expectedOutput: ["^jq-1\\."]
+  - name: rsync
+    command: rsync
+    args: ["--version"]
+    expectedOutput: ["rsync +version 3\\."]
+  - name: perl
+    command: perl
+    args: ["-e", "print qq(ok)"]
+    expectedOutput: ["^ok$"]
+  - name: curl
+    command: curl
+    args: ["--version"]
+    expectedOutput: ["^curl 8\\."]
+  - name: tini
+    command: tini
+    args: ["--version"]
+    expectedOutput: ["tini version"]
+  - name: archive tools
+    command: bash
+    args: ["-c", "echo tar gzip unzip zip xz zstd | xargs -n1 which >/dev/null && echo ALL_PRESENT"]
+    expectedOutput: ["ALL_PRESENT"]
+
+fileExistenceTests:
+  - name: apt-update-retry
+    path: /usr/local/bin/apt-update-retry
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+    uid: 0
+    gid: 0
+  - name: project root owned by docker
+    path: /var/www
+    shouldExist: true
+    uid: 1000
+    gid: 1000
+  - name: NVM_DIR owned by docker
+    path: /home/docker/.nvm
+    shouldExist: true
+    uid: 1000
+    gid: 1000

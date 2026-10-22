@@ -1,0 +1,26 @@
+# Git hooks (https://lefthook.dev): the fast `make lint` / `make repo-lint` checks, run only when
+# matching files are staged. Build, test and scan stay in CI. Install with `lefthook install`
+# (lefthook comes from mise.toml); skip once with `LEFTHOOK=0 git commit ...`.
+glob_matcher: doublestar
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: hadolint
+      glob: "images/*/Dockerfile"
+      run: make hadolint
+
+    - name: buildcheck
+      glob: ["images/*/Dockerfile", "images/_shared/**"]
+      run: make buildcheck BUILDER=
+
+    - name: shellcheck
+      glob: ["**/*.sh", "images/*/rootfs/usr/local/bin/*"]
+      run: make shellcheck
+
+    - name: actionlint
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: make actionlint
+
+    - name: gitleaks
+      run: make gitleaks-staged

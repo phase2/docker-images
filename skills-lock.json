@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "docker-destructive-guardrails": {
+      "source": "docker/skills",
+      "ref": "v0.3.1",
+      "sourceType": "github",
+      "skillPath": "skills/docker-destructive-guardrails/SKILL.md",
+      "computedHash": "f6c72f2ba003b2d6dc480f97beb0e166a61b5acfb1f0f6f31af2fa21a66bd9f2"
+    }
+  }
+}

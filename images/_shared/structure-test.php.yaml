@@ -1,0 +1,28 @@
+# container-structure-test: the PHP install shared by php-ci and php-devcloud (install-php.sh).
+# No PHP variables in the snippets: container-structure-test would expand them.
+schemaVersion: 2.0.0
+
+commandTests:
+  - name: php 8.3+
+    command: php
+    args: ["-r", "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;"]
+    expectedOutput: ["^8\\.[3-9]$"]
+  - name: php extensions
+    command: php
+    args:
+      - -r
+      - >-
+        echo implode(',', array_diff(['apcu','bcmath','bz2','calendar','ctype','curl','dom','exif','fileinfo','ftp','gd','gettext','gnupg','iconv','imagick','intl','ldap','mbstring','memcached','mysqli','pdo_mysql','pdo_pgsql','pdo_sqlite','pgsql','posix','readline','redis','simplexml','soap','sockets','sodium','sqlite3','ssh2','tokenizer','xml','xmlreader','xmlwriter','xsl','zip','zend opcache'], array_map('strtolower', get_loaded_extensions(false)), array_map('strtolower', get_loaded_extensions(true)))) ?: 'ok';
+    expectedOutput: ["^ok$"]
+  - name: xdebug installed but disabled
+    command: bash
+    args: ["-c", "php -r 'echo extension_loaded(\"xdebug\") ? \"on\" : \"off\";'; echo; php -n -d zend_extension=xdebug -r 'echo extension_loaded(\"xdebug\") ? \"available\" : \"missing\";'"]
+    expectedOutput: ["^off\\navailable$"]
+  - name: composer 2
+    command: composer
+    args: ["--version", "--no-ansi"]
+    expectedOutput: ["Composer version 2\\."]
+  - name: composer bin dirs on PATH
+    command: printenv
+    args: ["PATH"]
+    expectedOutput: ["^/var/www/vendor/bin:/home/docker/\\.composer/vendor/bin:"]

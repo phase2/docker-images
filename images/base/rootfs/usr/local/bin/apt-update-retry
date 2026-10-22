@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# `apt-get update`, retried. deb.debian.org mirrors occasionally return 5xx or a hash sum mismatch
+# for InRelease while they sync; Acquire::Retries retries single downloads but not that. Images
+# built FROM base call this instead of `apt-get update`.
+set -euo pipefail
+
+attempts=5
+for ((i = 1; i <= attempts; i++)); do
+  apt-get update "$@" && exit 0
+  if ((i < attempts)); then
+    echo "apt-get update failed (attempt ${i}/${attempts}); retrying in 5s" >&2
+    sleep 5
+  fi
+done
+exit 1

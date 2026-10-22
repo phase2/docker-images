@@ -1,0 +1,4 @@
+# Named build context `shared`: only the scripts images bind-mount.
+*
+!install-php.sh
+!install-composer.sh
