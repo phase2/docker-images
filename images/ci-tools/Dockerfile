@@ -22,7 +22,7 @@ ARG HELM_VERSION=3.22.1
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.*)$
 ARG KUSTOMIZE_VERSION=5.8.3
 # renovate: datasource=github-tags depName=aws/aws-cli
-ARG AWSCLI_VERSION=2.38.4
+ARG AWSCLI_VERSION=2.38.5
 
 COPY awscli.pubkey /tmp/awscli.pubkey
 
