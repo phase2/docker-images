@@ -27,7 +27,6 @@ yarn 1, and more), plus:
 | kustomize        | `KUSTOMIZE_VERSION` | GitHub release       | the release's `checksums.txt`                               |
 | aws (AWS CLI v2) | `AWSCLI_VERSION`    | awscli.amazonaws.com | PGP signature, checked against AWS's key in `awscli.pubkey` |
 | htpasswd         | Debian package      | `apache2-utils`      | apt                                                         |
-| tmate            | Debian package      | `tmate`              | apt                                                         |
 
 The `ARG`s are in the `fetch` stage of the [Dockerfile](Dockerfile); Renovate keeps them current.
 

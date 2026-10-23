@@ -38,7 +38,3 @@ commandTests:
     command: htpasswd
     args: ["-nbB", "user", "secret"]
     expectedOutput: ["^user:"]
-  - name: tmate
-    command: tmate
-    args: ["-V"]
-    expectedOutput: ["^tmate "]
