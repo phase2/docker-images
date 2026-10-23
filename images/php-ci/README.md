@@ -49,8 +49,10 @@ The extension list is shared with [php-devcloud](../php-devcloud/README.md) and 
 ## Details worth knowing
 
 - **PHP settings** are Debian's CLI defaults (`/etc/php/<version>/cli/php.ini`), so
-  `memory_limit` is `-1`. Unlike php-devcloud there are no image defaults or project overrides;
-  pass `-d` flags or a `PHPRC` if a job needs different settings.
+  `memory_limit` is `-1`. The one exception is `zend.assertions = 1`, so test suites run
+  `assert()`: Debian's production `-1` compiles assertions out, and nothing can turn them back on
+  at runtime. Unlike php-devcloud there are no project overrides; pass `-d` flags or a `PHPRC` if
+  a job needs different settings.
 - **PATH** starts with `/var/www/vendor/bin` and `/home/docker/.composer/vendor/bin`, and
   `COMPOSER_HOME=/home/docker/.composer`.
 - **Where PHP comes from.** Debian trixie ships PHP 8.4 only. For 8.3 and 8.5 the build adds the

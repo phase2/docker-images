@@ -49,6 +49,12 @@ apt-get install -y --no-install-recommends "${packages[@]}"
 # Xdebug is installed but disabled; images enable it at runtime (XDEBUG_ENABLED=1).
 phpdismod -v ALL -s ALL xdebug
 
+# Run assert() in every SAPI: these are dev and CI images, and Debian's production php.ini (-1)
+# compiles assertions out, which nothing can undo at runtime. Later scan dirs can still override.
+for confd in "/etc/php/${PHP_VERSION}"/*/conf.d; do
+  printf 'zend.assertions = 1\n' > "${confd}/05-assertions.ini"
+done
+
 if [[ "${flavor}" == fpm ]]; then
   ln -sf "/usr/sbin/php-fpm${PHP_VERSION}" /usr/local/sbin/php-fpm
   # Images ship their own pool config.

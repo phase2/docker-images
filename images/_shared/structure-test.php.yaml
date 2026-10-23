@@ -18,6 +18,10 @@ commandTests:
     command: bash
     args: ["-c", "php -r 'echo extension_loaded(\"xdebug\") ? \"on\" : \"off\";'; echo; php -n -d zend_extension=xdebug -r 'echo extension_loaded(\"xdebug\") ? \"available\" : \"missing\";'"]
     expectedOutput: ["^off\\navailable$"]
+  - name: assertions run (zend.assertions = 1)
+    command: php
+    args: ["-r", "echo ini_get('zend.assertions');"]
+    expectedOutput: ["^1$"]
   - name: composer 2
     command: composer
     args: ["--version", "--no-ansi"]
