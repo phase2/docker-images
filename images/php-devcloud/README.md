@@ -69,6 +69,7 @@ ini file. Everything else can go in either.
 | `max_input_vars`                        | 2000                            | 2000                      |
 | `display_errors`, `error_reporting`     | On, `E_ALL`                     | On, `E_ALL`               |
 | `date.timezone`                         | UTC                             | UTC                       |
+| `zend.assertions`                       | 1 (`assert()` runs)             | 1                         |
 
 The FPM pool uses `pm = dynamic` with up to 10 children, answers `/ping`, discards the access log,
 and sends worker output and errors to the container log. `clear_env = no` passes the pod's
@@ -82,6 +83,11 @@ environment (database credentials, secrets) through to PHP.
 - **sudo keeps the environment.** sudoers keeps `PATH`, `NVM_DIR`, `PHP_INI_SCAN_DIR`,
   `PHP_OVERRIDES_DIR`, `MSMTP_*` and `XDEBUG_*`, and drops `secure_path`. So `sudo php`,
   `sudo drush` and `sudo su -c ...` see the same PHP settings, vendor binaries and Node.
+- **Login shells keep the PATH.** `/etc/profile` resets `PATH`, so `/etc/profile.d/10-image-path.sh`
+  restores the image's. `bash -l`, `su - docker` and `sudo -iu docker` still find vendor/bin and
+  Node.
+- **git works as root.** The checkout is owned by `docker` and `kubectl exec` shells are root, so
+  the system gitconfig marks `/var/www` and the repos under it as `safe.directory`.
 - **Only sudo is setuid.** The build strips setuid and setgid from every other binary. `sudo su`
   still works, because `su` then runs as root.
 - **Reloading FPM.** `kill -USR2 1` sends USR2 to tini, which passes it to the php-fpm master, and

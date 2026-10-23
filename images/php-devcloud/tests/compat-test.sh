@@ -36,6 +36,7 @@ echo json_encode([
   'mysql_host' => getenv('MYSQL_HOST'),
   'memory_limit' => ini_get('memory_limit'),
   'max_input_vars' => ini_get('max_input_vars'),
+  'assertions' => ini_get('zend.assertions'),
 ]);
 PHP
 printf 'max_input_vars = 4321\n' > "${work}/www/.overrides/php/project.ini"
@@ -79,8 +80,11 @@ fi
 expect "sudo su works as uid 1000" "root" "$("${docker[@]}" exec -u 1000 "${plain}" sudo -n su -c 'id -un')"
 expect "HOME writable for docker" "yes" "$("${docker[@]}" exec -u 1000 "${plain}" bash -c 'touch "${HOME}/.probe" && echo yes')"
 expect "vendor/bin on PATH" "yes" "$("${docker[@]}" exec -u 1000 "${plain}" bash -c '[[ ":${PATH}:" == *":/var/www/vendor/bin:"* ]] && echo yes')"
+expect "login shell keeps vendor/bin and Node on PATH" "yes" "$("${docker[@]}" exec "${plain}" runuser -u docker -- bash -lc '[[ ":${PATH}:" == *":/var/www/vendor/bin:"* ]] && command -v node >/dev/null && echo yes')"
+expect "root git works in docker-owned /var/www" "yes" "$("${docker[@]}" exec "${plain}" bash -c 'git init -q /var/www && git init -q /var/www/sub && chown -R docker:docker /var/www && git -C /var/www status >/dev/null && git -C /var/www/sub status >/dev/null && echo yes; rm -rf /var/www/.git /var/www/sub')"
 expect "unset PHP_OVERRIDES_DIR is logged" "1" "$("${docker[@]}" logs "${plain}" 2>&1 | grep -c 'PHP_OVERRIDES_DIR is not set' || true)"
 expect "CLI memory_limit" "-1" "$("${docker[@]}" exec "${plain}" php -r 'echo ini_get("memory_limit");')"
+expect "CLI runs assertions" "1" "$("${docker[@]}" exec "${plain}" php -r 'echo ini_get("zend.assertions");')"
 setuid="$("${docker[@]}" exec "${plain}" find / -xdev -perm /6000 -type f)"
 expect "only sudo is setuid" "/usr/bin/sudo" "${setuid}"
 
@@ -89,6 +93,7 @@ body="$("${docker[@]}" exec "${plain}" php /usr/local/lib/fcgi.php /var/www/prob
 expect "FPM worker runs as docker" "docker" "$(php_field user "${body}")"
 expect "pod env reaches FPM workers (clear_env = no)" "db.example.internal" "$(php_field mysql_host "${body}")"
 expect "FPM memory_limit default" "1024M" "$(php_field memory_limit "${body}")"
+expect "FPM runs assertions" "1" "$(php_field assertions "${body}")"
 
 echo "== nvm (.nvmrc)"
 node_out="$("${docker[@]}" exec "${plain}" runuser -u docker -- bash -c '

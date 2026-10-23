@@ -29,6 +29,9 @@ Defaults env_keep += "PATH NVM_DIR PHP_INI_SCAN_DIR PHP_OVERRIDES_DIR MSMTP_HOST
 Defaults env_keep += "XDEBUG_ENABLED XDEBUG_MODE XDEBUG_CLIENT_HOST XDEBUG_CLIENT_PORT"
 SUDOERS
 chmod 0440 /etc/sudoers.d/docker
+# The checkout is owned by docker, and `kubectl exec` shells are root: let root's git use it.
+git config --system --add safe.directory /var/www
+git config --system --add safe.directory '/var/www/*'
 install -d -o 1000 -g 1000 -m 0775 /run/php-runtime /run/php-runtime/conf.d /run/php-runtime/fpm.d
 rm -rf /var/log/*.log /var/log/apt /tmp/*
 EOF
@@ -60,6 +63,10 @@ ENV TERM=xterm \
     XDEBUG_CLIENT_PORT=9003 \
     COMPOSER_HOME=/home/docker/.composer \
     PATH=/var/www/vendor/bin:/home/docker/.composer/vendor/bin:${PATH}
+
+# Login shells (bash -l, su -, sudo -i) get the image's PATH back after /etc/profile resets it,
+# so they still find vendor/bin and Node.
+RUN printf 'export PATH="%s"\n' "${PATH}" > /etc/profile.d/10-image-path.sh
 
 EXPOSE 9000
 ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/docker-entrypoint"]
