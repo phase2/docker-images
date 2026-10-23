@@ -13,7 +13,7 @@ All images are linux/amd64 and linux/arm64, Debian trixie-slim based, with the `
 ```
 images/
   base/           internal foundation: docker user, utilities, nvm + Node 24 (not published)
-  ci-tools/       base + kubectl, helm (helm3), kustomize, aws, htpasswd, tmate
+  ci-tools/       base + kubectl, helm (helm3), kustomize, aws, htpasswd
   php-ci/         ci-tools + PHP CLI + Composer
   php-devcloud/   base + PHP CLI/FPM, Composer, MySQL client, build tools; rootfs/ and tests/
   _shared/        install-php.sh + install-composer.sh (used by both PHP images) + shared structure tests

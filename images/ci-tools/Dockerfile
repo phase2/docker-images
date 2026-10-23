@@ -2,7 +2,7 @@
 # check=error=true
 #
 # ci-tools: general CI job container (GitHub Actions `container:` on self-hosted runners).
-# base + kubectl, helm, kustomize, aws, htpasswd and tmate. Runs as uid 1000, no sudo, no setuid.
+# base + kubectl, helm, kustomize, aws and htpasswd. Runs as uid 1000, no sudo, no setuid.
 # Built through docker-bake.hcl (`FROM base` is the named context of the internal base image).
 
 # ---------------------------------------------------------------------------
@@ -84,12 +84,12 @@ EOF
 FROM base AS ci-tools
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 
-# apache2-utils: htpasswd for deploy scripts; tmate: interactive debugging of CI jobs.
+# apache2-utils: htpasswd for deploy scripts.
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked <<'EOF'
 export DEBIAN_FRONTEND=noninteractive
 apt-update-retry
-apt-get install -y --no-install-recommends apache2-utils tmate
+apt-get install -y --no-install-recommends apache2-utils
 # No privilege escalation paths: strip every setuid/setgid bit (passwd, chsh, su, mount, ...).
 find / -xdev -perm /6000 -type f -exec chmod a-s {} +
 rm -rf /var/log/*.log /var/log/apt /tmp/*
