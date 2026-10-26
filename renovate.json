@@ -63,6 +63,14 @@
       "groupName": "tool versions"
     },
     {
+      "description": "httpd-devcloud: the official Apache image, kept on 2.4 (its published tag) and the trixie variant; patch bumps merge on green CI with the week's tool versions",
+      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["docker.io/library/httpd", "httpd"],
+      "allowedVersions": "/^2\\.4\\.\\d+-trixie$/",
+      "automerge": true,
+      "groupName": "tool versions"
+    },
+    {
       "matchManagers": ["github-actions"],
       "groupName": "github-actions"
     },

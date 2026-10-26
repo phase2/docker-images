@@ -7,6 +7,7 @@
 #   make lint
 #   make build test scan IMAGE=php-devcloud PHP=8.4
 #   make build test scan IMAGE=ci-tools
+#   make build test scan IMAGE=httpd-devcloud
 #   make build-all test-all scan-all          # every image: one bake call, then parallel tests/scans
 SHELL       := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
@@ -25,11 +26,13 @@ endif
 ifndef PHP_ALL
 PHP_ALL = $(eval PHP_ALL := $(shell $(BUILDX) bake --print php-ci 2>/dev/null | sed -n 's/.*"PHP_VERSION": "\(.*\)".*/\1/p'))$(PHP_ALL)
 endif
-VARIANTS = ci-tools $(foreach v,$(PHP_ALL),php-ci:$(v) php-devcloud:$(v))
+# Images without a PHP matrix: one bake target each, named after the image (PHP is ignored).
+NON_PHP_IMAGES := ci-tools httpd-devcloud
+VARIANTS = $(NON_PHP_IMAGES) $(foreach v,$(PHP_ALL),php-ci:$(v) php-devcloud:$(v))
 
-ifeq ($(IMAGE),ci-tools)
-TARGET := ci-tools
-TAG    ?= local/ci-tools:dev
+ifneq ($(filter $(IMAGE),$(NON_PHP_IMAGES)),)
+TARGET := $(IMAGE)
+TAG    ?= local/$(IMAGE):dev
 else
 TARGET := $(IMAGE)-$(subst .,-,$(PHP))
 TAG    ?= local/$(IMAGE):$(PHP)
@@ -96,8 +99,8 @@ scan:         ## gate: fixable HIGH/CRITICAL in OS packages
 	$(TRIVY) image --quiet --exit-code 1 --pkg-types os --ignore-unfixed --severity HIGH,CRITICAL $(SCAN_FLAGS) $(TAG)
 
 build-all:    ## every variant in one bake call: base and ci-tools build once, variants in parallel. NO_CACHE=1 for a cold build
-	$(BUILDX) bake ci-tools php-ci php-devcloud --set '*.platform=$(PLATFORM)' $(if $(NO_CACHE),--no-cache) \
-	  --set 'ci-tools.tags=local/ci-tools:dev' \
+	$(BUILDX) bake $(NON_PHP_IMAGES) php-ci php-devcloud --set '*.platform=$(PLATFORM)' $(if $(NO_CACHE),--no-cache) \
+	  $(foreach i,$(NON_PHP_IMAGES),--set '$(i).tags=local/$(i):dev') \
 	  $(foreach v,$(PHP_ALL),--set 'php-ci-$(subst .,-,$(v)).tags=local/php-ci:$(v)' \
 	    --set 'php-devcloud-$(subst .,-,$(v)).tags=local/php-devcloud:$(v)') \
 	  --load

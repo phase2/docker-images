@@ -71,7 +71,7 @@ jobs:
         arch: [amd64, arm64]
         variant: ${{ fromJSON(needs.lint.outputs.variants) }}
     env:
-      # Read by make: IMAGE and PHP pick the bake target (PHP is ignored for ci-tools).
+      # Read by make: IMAGE and PHP pick the bake target (PHP is ignored for ci-tools and httpd-devcloud).
       IMAGE: ${{ matrix.variant.image }}
       PHP: ${{ matrix.variant.channel }}
       BUILDER: ""
