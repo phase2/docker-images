@@ -78,6 +78,15 @@ status() { # name url [curl args...]: the HTTP status code
   "${docker[@]}" exec "${name}" curl -sk -o /dev/null -w '%{http_code}' "$@" "${url}" || true
 }
 
+logged() { # name pattern: "yes" once a line matching pattern reaches the container's log
+  local name="$1" pattern="$2"
+  # Request-time lines reach `docker logs` asynchronously; under load they lag the response.
+  for _ in $(seq 1 10); do
+    if "${docker[@]}" logs "${name}" 2>&1 | grep -q "${pattern}"; then echo yes; return; fi
+    sleep 1
+  done
+}
+
 echo "== defaults (no DOCROOT, no overrides)"
 plain="httpd-devcloud-compat-plain-$$"
 start "${plain}"
@@ -87,7 +96,7 @@ expect "no override header without APACHE_OVERRIDES_DIR" "" "$(get "${plain}" ht
 expect "Apache runs as PID 1" "httpd" "$("${docker[@]}" exec "${plain}" cat /proc/1/comm)"
 expect "workers run as www-data" "www-data" "$("${docker[@]}" exec "${plain}" bash -c '
   for d in /proc/[0-9]*; do read -r _ _ _ ppid _ < "${d}/stat" && [[ "${ppid}" == 1 ]] && stat -c %U "${d}"; done | sort -u' 2>/dev/null)"
-expect "access log goes to stdout" "yes" "$("${docker[@]}" logs "${plain}" 2>/dev/null | grep -q '"GET / HTTP/1.1" 200' && echo yes)"
+expect "access log goes to stdout" "yes" "$(logged "${plain}" '"GET / HTTP/1.1" 200')"
 expect "ServerName is set (no AH00558 warning)" "0" "$("${docker[@]}" logs "${plain}" 2>&1 | grep -c AH00558 || true)"
 
 echo "== HTTPS on :443"
@@ -101,7 +110,7 @@ echo "== FastCGI hand-off"
 expect "missing .php stays with Apache (404)" "404" "$(status "${plain}" http://localhost/missing.php)"
 "${docker[@]}" exec "${plain}" bash -c 'echo "<?php" > /var/www/docroot/exists.php'
 expect "existing .php goes to FastCGI (503 with no backend)" "503" "$(status "${plain}" http://localhost/exists.php)"
-expect "the proxy error names the default backend 127.0.0.1:9000" "yes" "$("${docker[@]}" logs "${plain}" 2>&1 | grep -q 'AH00957.*127\.0\.0\.1:9000' && echo yes)"
+expect "the proxy error names the default backend 127.0.0.1:9000" "yes" "$(logged "${plain}" 'AH00957.*127\.0\.0\.1:9000')"
 
 echo "== DOCROOT and APACHE_DOCUMENTROOT"
 abs="httpd-devcloud-compat-abs-$$"
@@ -129,13 +138,26 @@ expect "override directive (RewriteRule) on :443" "web" "$(get "${over}" https:/
 expect "override directive (Header) on :80" "yes" "$(get "${over}" http://localhost/ -u "preview:${pass_secret}" -o /dev/null -D - | tr -d '\r' | sed -n 's/^x-project-override: //Ip')"
 expect "server-level httpd-vhosts.conf adds a vhost" "extra-vhost" "$(get "${over}" http://localhost/ -H 'Host: extra.test')"
 expect "no notice when APACHE_OVERRIDES_DIR is set" "0" "$("${docker[@]}" logs "${over}" 2>&1 | grep -c 'APACHE_OVERRIDES_DIR' || true)"
-"${docker[@]}" exec "${over}" bash -c "echo 'Header always set X-Project-Override reloaded' > ${overrides}/httpd-vhost-overrides.conf && apachectl -k graceful"
-sleep 2
-expect "a graceful restart re-reads the overrides in place" "reloaded" "$(get "${over}" http://localhost/ -u "preview:${pass_secret}" -o /dev/null -D - | tr -d '\r' | sed -n 's/^x-project-override: //Ip')"
+override_header() { # name want [curl args...]: the X-Project-Override header on :80, polled until it is want
+  local name="$1" want="$2" value=""; shift 2
+  for _ in $(seq 1 10); do
+    value="$(get "${name}" http://localhost/ "$@" -o /dev/null -D - | tr -d '\r' | sed -n 's/^x-project-override: //Ip')"
+    [[ "${value}" == "${want}" ]] && break
+    sleep 1
+  done
+  printf '%s' "${value}"
+}
+# httpd-foreground beside the live server (as from kubectl exec) must keep its pid file.
+"${docker[@]}" exec "${over}" httpd-foreground -t >/dev/null 2>&1 || fail "httpd-foreground -t in a running container"
+"${docker[@]}" exec "${over}" bash -c "echo 'Header always set X-Project-Override reloaded' > ${overrides}/httpd-vhost-overrides.conf && apachectl -k graceful" \
+  || fail "apachectl -k graceful after httpd-foreground -t"
+expect "a graceful restart re-reads the overrides in place" "reloaded" "$(override_header "${over}" reloaded -u "preview:${pass_secret}")"
 
 missing="httpd-devcloud-compat-missing-$$"
-start "${missing}" -e APACHE_OVERRIDES_DIR=/var/www/nonexistent
+start "${missing}" -e APACHE_OVERRIDES_DIR=ci/etc/apache-later
 expect "a missing overrides directory is logged, and Apache still starts" "1" "$("${docker[@]}" logs "${missing}" 2>&1 | grep -c 'is not a directory' || true)"
+"${docker[@]}" exec "${missing}" bash -c 'cp -r /var/www/ci/etc/apache /var/www/ci/etc/apache-later && apachectl -k graceful'
+expect "a relative overrides directory, made after start, applies on a graceful restart" "yes" "$(override_header "${missing}" yes)"
 
 if [[ -n "${FCGI_BACKEND_IMAGE:-}" ]]; then
   echo "== PHP through ${FCGI_BACKEND_IMAGE} (shared network and /var/www, as in a pod)"

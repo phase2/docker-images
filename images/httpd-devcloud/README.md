@@ -35,7 +35,7 @@ httpd-foreground (PID 1): write conf/devcloud-runtime.conf from the environment,
 | `APACHE_DOCUMENTROOT`                               | unset                      | `DocumentRoot`. Wins over `DOCROOT`.                                                                                       |
 | `DOCROOT`                                           | `/var/www/docroot`         | `DocumentRoot` when `APACHE_DOCUMENTROOT` is unset. A relative path, such as `web`, is under `/var/www`.                   |
 | `APACHE_FCGI_HOST_PORT`                             | `127.0.0.1:9000`           | where `.php` requests go: the PHP-FPM container in the same pod                                                            |
-| `APACHE_OVERRIDES_DIR`                              | unset                      | directory of project Apache settings (see below). Unset means none, and a notice is logged at start.                       |
+| `APACHE_OVERRIDES_DIR`                              | unset                      | directory of project Apache settings (see below); a relative path is under `/var/www`. Unset means none, with a notice.    |
 | `APACHE_BASIC_AUTH_USER` / `APACHE_BASIC_AUTH_PASS` | unset                      | when both are set, the docroot requires that login                                                                         |
 | `APACHE_SERVERNAME`                                 | the container's hostname   | `ServerName`                                                                                                               |
 | `DEBUG`                                             | unset                      | non-zero makes `httpd-foreground` log what it applied                                                                      |
@@ -80,7 +80,8 @@ when it is missing:
 
 Both can use `${APACHE_DOCUMENTROOT}` and `${APACHE_FCGI_HOST_PORT}`. The files are read where
 they are, not copied, so `apachectl -k graceful` picks up edits. When the directory does not
-exist, a notice is logged and Apache starts without overrides.
+exist, a notice is logged and Apache starts without overrides; they apply once it exists and
+Apache restarts gracefully.
 
 ### Basic auth
 
