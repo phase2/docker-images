@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Install PHP ${PHP_VERSION} and the common extension set into a Debian trixie image.
+# Install PHP ${PHP_VERSION} and the common extension set into a Debian image.
 # Composer comes from install-composer.sh, in its own layer.
-# Debian ships one PHP version (DEBIAN_PHP_VERSION); every other version comes from
-# packages.sury.org, whose signing key fingerprint is pinned below.
+# Every PHP version comes from packages.sury.org, whose signing key fingerprint is pinned below,
+# so all versions get the same packaging and extension builds, and a Debian release upgrade
+# changes no PHP versions. The repo follows the base image's Debian codename.
 #
 # Needs base's apt-update-retry.
 #
@@ -14,24 +15,31 @@ set -euo pipefail
 flavor="${1:?usage: install-php.sh <cli|fpm>}"
 : "${PHP_VERSION:?PHP_VERSION must be set}"
 
-DEBIAN_PHP_VERSION=8.4
 SURY_SIGNER_FPR=15058500A0235D97F5D10063B188E2B695BD4743
 
 EXTENSIONS=(
-  apcu bcmath bz2 curl gd gnupg imagick intl ldap mbstring memcached mysql opcache pgsql
-  readline redis soap sqlite3 ssh2 xdebug xml xsl zip
+  apcu bcmath bz2 curl gd gmp gnupg imagick intl ldap mbstring memcached mysql opcache pgsql
+  readline redis soap sqlite3 ssh2 tidy uploadprogress xdebug xml xsl yaml zip
 )
 
 export DEBIAN_FRONTEND=noninteractive
 
-if [[ "${PHP_VERSION}" != "${DEBIAN_PHP_VERSION}" ]]; then
-  curl -fsSL --retry 5 --proto '=https' -o /tmp/sury.gpg https://packages.sury.org/php/apt.gpg
-  gpg --show-keys --with-colons /tmp/sury.gpg | awk -F: '/^fpr/{print $10}' | grep -qx "${SURY_SIGNER_FPR}"
-  install -m 0644 /tmp/sury.gpg /usr/share/keyrings/sury-php.gpg
-  echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ trixie main" \
-    > /etc/apt/sources.list.d/sury-php.list
-  rm -f /tmp/sury.gpg
-fi
+# shellcheck disable=SC1091
+codename="$(. /etc/os-release && echo "${VERSION_CODENAME:?}")"
+curl -fsSL --retry 5 --proto '=https' -o /tmp/sury.gpg https://packages.sury.org/php/apt.gpg
+# The file must hold sury's key and no other: every primary key in it is trusted for the repo.
+[[ "$(gpg --show-keys --with-colons /tmp/sury.gpg | awk -F: '$1 == "pub" {getline; print $10}')" == "${SURY_SIGNER_FPR}" ]]
+install -m 0644 /tmp/sury.gpg /usr/share/keyrings/sury-php.gpg
+echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ ${codename} main" \
+  > /etc/apt/sources.list.d/sury-php.list
+# Debian ships its own php<x.y>-* for its default version: prefer sury's even when Debian's is
+# newer, so PHP and its extensions never mix sources (here or in derived images' apt installs).
+# Libraries sury also rebuilds (libgd3, ...) keep apt's normal newest-wins rule.
+cat > /etc/apt/preferences.d/sury-php <<'PREFS'
+Package: php*
+Pin: origin packages.sury.org
+Pin-Priority: 990
+PREFS
 apt-update-retry
 
 p="php${PHP_VERSION}"
