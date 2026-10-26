@@ -8,6 +8,7 @@
 #   make build test scan IMAGE=php-devcloud PHP=8.4
 #   make build test scan IMAGE=ci-tools
 #   make build test scan IMAGE=httpd-devcloud
+#   make build-all test-all scan-all          # every image: one bake call, then parallel tests/scans
 SHELL       := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 
@@ -21,8 +22,13 @@ ifndef PLATFORM
 PLATFORM = $(eval PLATFORM := linux/$(shell $(DOCKER) version -f '{{.Server.Arch}}'))$(PLATFORM)
 endif
 
+# The PHP matrix, read from docker-bake.hcl so it lives in one place.
+ifndef PHP_ALL
+PHP_ALL = $(eval PHP_ALL := $(shell $(BUILDX) bake --print php-ci 2>/dev/null | sed -n 's/.*"PHP_VERSION": "\(.*\)".*/\1/p'))$(PHP_ALL)
+endif
 # Images without a PHP matrix: one bake target each, named after the image (PHP is ignored).
 NON_PHP_IMAGES := ci-tools httpd-devcloud
+VARIANTS = $(NON_PHP_IMAGES) $(foreach v,$(PHP_ALL),php-ci:$(v) php-devcloud:$(v))
 
 ifneq ($(filter $(IMAGE),$(NON_PHP_IMAGES)),)
 TARGET := $(IMAGE)
@@ -44,8 +50,11 @@ STUB_CONTEXT   := docker-image://docker.io/library/debian:trixie-slim
 SCRIPTS         = $(shell find images scripts -type f \( -name '*.sh' -o -path '*/usr/local/bin/*' \))
 TRIVY          := $(DOCKER) run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache -v "$(CURDIR):/out" $(TRIVY_IMAGE)
 SARIF          ?= trivy.sarif
+# Extra flags for `scan`. scan-all fetches the DB once, then scans in parallel with
+# --skip-db-update and an in-memory layer cache (the on-disk one takes an exclusive lock).
+SCAN_FLAGS     ?=
 
-.PHONY: all builder lint hadolint shellcheck buildcheck repo-lint actionlint gitleaks gitleaks-staged build test scan scan-report scan-sarif
+.PHONY: all builder lint hadolint shellcheck buildcheck repo-lint actionlint gitleaks gitleaks-staged build test scan scan-report scan-sarif build-all test-all scan-all
 
 all: lint build test scan
 
@@ -87,7 +96,21 @@ test:
 	DOCKER="$(DOCKER)" CST="$(CST)" PLATFORM="$(PLATFORM)" scripts/test-image.sh $(IMAGE) $(TAG)
 
 scan:         ## gate: fixable HIGH/CRITICAL in OS packages
-	$(TRIVY) image --quiet --exit-code 1 --pkg-types os --ignore-unfixed --severity HIGH,CRITICAL $(TAG)
+	$(TRIVY) image --quiet --exit-code 1 --pkg-types os --ignore-unfixed --severity HIGH,CRITICAL $(SCAN_FLAGS) $(TAG)
+
+build-all:    ## every variant in one bake call: base and ci-tools build once, variants in parallel. NO_CACHE=1 for a cold build
+	$(BUILDX) bake $(NON_PHP_IMAGES) php-ci php-devcloud --set '*.platform=$(PLATFORM)' $(if $(NO_CACHE),--no-cache) \
+	  $(foreach i,$(NON_PHP_IMAGES),--set '$(i).tags=local/$(i):dev') \
+	  $(foreach v,$(PHP_ALL),--set 'php-ci-$(subst .,-,$(v)).tags=local/php-ci:$(v)' \
+	    --set 'php-devcloud-$(subst .,-,$(v)).tags=local/php-devcloud:$(v)') \
+	  --load
+
+test-all:     ## `test` for every variant in parallel; prints the logs of failures
+	MAKE="$(MAKE)" scripts/each-variant.sh test $(VARIANTS)
+
+scan-all:     ## `scan` for every variant in parallel, after fetching the vulnerability DB once
+	$(TRIVY) image --quiet --download-db-only
+	SCAN_FLAGS="--skip-db-update --cache-backend memory" MAKE="$(MAKE)" scripts/each-variant.sh scan $(VARIANTS)
 
 scan-report:  ## report only: everything, including vendored Go/npm/PHP dependencies
 	$(TRIVY) image --quiet --severity HIGH,CRITICAL $(TAG)

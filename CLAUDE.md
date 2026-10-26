@@ -31,6 +31,10 @@ encodes it.
 
 - The Debian base (`debian:trixie-slim`) and apt packages stay unpinned: the weekly no-cache
   rebuild picks up security fixes and Trivy gates it. Hence hadolint DL3008 is ignored.
+- Every PHP version, 8.4 included, comes from packages.sury.org even though Debian ships 8.4:
+  extensions match across versions and a Debian upgrade changes no PHP. The apt pin in
+  `install-php.sh` is an origin pin (prefer sury for `php*`), not a version pin; the shared
+  structure test fails if any `php*` package comes from elsewhere.
 - php-devcloud defaults to root and `docker` has passwordless sudo, because devcloud tooling
   depends on both. ci-tools and php-ci run as uid 1000 without sudo.
 - Images are full Debian with broad toolsets: the tool contract outranks image size.

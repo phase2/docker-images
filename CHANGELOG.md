@@ -5,7 +5,7 @@ Breaking changes to an image's contract (removed tools, changed users, paths or 
 ## Unreleased
 
 ### Added
-- `ci-tools:1`, `php-ci:8.3|8.4|8.5` and `php-devcloud:8.3|8.4|8.5`: the initial images replacing `phase2/docker-cli`.
+- `ci-tools:1`, `php-ci:8.3|8.4|8.5` and `php-devcloud:8.3|8.4|8.5`: the initial images replacing `phase2/docker-cli`. Every PHP version, with its extensions, comes from packages.sury.org.
 - `httpd-devcloud:2.4`: the Apache web container for devcloud pods, replacing `docksal/apache:2.4`. It honors `DOCROOT`, defaults FastCGI to `127.0.0.1:9000`, reads project overrides from `APACHE_OVERRIDES_DIR`, and no longer logs the basic auth password.
 
 ### Changed
