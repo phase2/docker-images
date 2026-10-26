@@ -25,16 +25,21 @@ Everything in [ci-tools](../ci-tools/README.md), plus:
 
 | Tool       | Source                                                                              | Notes                                                                                                            |
 | ---------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| PHP CLI    | Debian for 8.4; [packages.sury.org](https://packages.sury.org/php/) for 8.3 and 8.5 | one PHP version per tag                                                                                          |
+| PHP CLI    | [packages.sury.org](https://packages.sury.org/php/)                                 | one PHP version per tag                                                                                          |
 | Composer 2 | getcomposer.org                                                                     | pinned by `COMPOSER_VERSION` in `images/_shared/install-composer.sh`, checked against the release's `.sha256sum` |
 
 ### PHP extensions
 
-apcu, bcmath, bz2, calendar, ctype, curl, dom, exif, ffi, fileinfo, ftp, gd, gettext, gnupg,
+apcu, bcmath, bz2, calendar, ctype, curl, dom, exif, ffi, fileinfo, ftp, gd, gettext, gmp, gnupg,
 iconv, igbinary, imagick, intl, ldap, mbstring, memcached, msgpack, mysqli, mysqlnd, OPcache,
 pcntl, pdo_mysql, pdo_pgsql, pdo_sqlite, pgsql, posix, readline, redis, shmop, simplexml, soap,
-sockets, sodium, sqlite3, ssh2, sysvmsg, sysvsem, sysvshm, tokenizer, xml, xmlreader, xmlwriter,
-xsl, zip, plus PHP's always-on core extensions.
+sockets, sodium, sqlite3, ssh2, sysvmsg, sysvsem, sysvshm, tidy, tokenizer, uploadprogress, xml,
+xmlreader, xmlwriter, xsl, yaml, zip, plus PHP's always-on core extensions.
+
+gmp, tidy and yaml are loaded on both Acquia and Pantheon, and uploadprogress on Pantheon (Drupal's
+status report checks for it). yaml matters most: Drupal core parses YAML with it whenever it is
+loaded (`YamlPecl`), so an image without it would parse config differently from the hosting
+platform.
 
 **Xdebug** is installed but not loaded. php-ci has no entrypoint toggle, so load it per command,
 for example for coverage:
@@ -55,8 +60,10 @@ The extension list is shared with [php-devcloud](../php-devcloud/README.md) and 
   a job needs different settings.
 - **PATH** starts with `/var/www/vendor/bin` and `/home/docker/.composer/vendor/bin`, and
   `COMPOSER_HOME=/home/docker/.composer`.
-- **Where PHP comes from.** Debian trixie ships PHP 8.4 only. For 8.3 and 8.5 the build adds the
-  sury.org apt repository and fails unless its signing key has the expected fingerprint.
+- **Where PHP comes from.** Every version, 8.4 included, comes from the sury.org apt repository,
+  so all tags share the same packaging and extension builds. The build fails unless sury's
+  signing key has the expected fingerprint, and an apt pin keeps `php*` packages on sury even
+  when Debian's own 8.4 packages are newer, including in derived images.
 - **Extra extensions** need a derived image, because there is no sudo at run time:
 
   ```dockerfile
