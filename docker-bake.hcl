@@ -11,7 +11,7 @@ variable "PHP_VERSIONS"   { default = ["8.3", "8.4", "8.5"] }
 variable "CI_TOOLS_MAJOR" { default = "1" }
 
 group "default" {
-  targets = ["ci-tools", "php-ci", "php-devcloud"]
+  targets = ["ci-tools", "httpd-devcloud", "php-ci", "php-devcloud"]
 }
 
 target "_common" {
@@ -29,6 +29,13 @@ target "ci-tools" {
   context  = "images/ci-tools"
   contexts = { base = "target:base" }
   tags     = ["${REGISTRY}/ci-tools:${CI_TOOLS_MAJOR}"]
+}
+
+# Apache for devcloud pods. FROM the official httpd image, not base; one tag, the Apache minor.
+target "httpd-devcloud" {
+  inherits = ["_common"]
+  context  = "images/httpd-devcloud"
+  tags     = ["${REGISTRY}/httpd-devcloud:2.4"]
 }
 
 target "php-ci" {

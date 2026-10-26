@@ -1,0 +1,5 @@
+# Build context: only what the Dockerfile COPYs.
+*
+!Dockerfile
+!rootfs/
+**/*.md

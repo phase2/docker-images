@@ -1,0 +1,74 @@
+# container-structure-test: httpd-devcloud. The runtime contract (docroot, overrides, basic auth,
+# HTTPS, FastCGI) is exercised end to end by tests/compat-test.sh.
+# container-structure-test expands $VARS in args, so checks avoid shell variables.
+schemaVersion: 2.0.0
+
+metadataTest:
+  exposedPorts: ["80", "443"]
+  cmd: ["httpd-foreground"]
+  workdir: /var/www
+  labels:
+    - key: org.opencontainers.image.title
+      value: httpd-devcloud
+    - key: org.opencontainers.image.source
+      value: https://github.com/phase2/docker-images
+
+commandTests:
+  - name: config passes the syntax check (through httpd-foreground, which writes the runtime settings)
+    command: httpd-foreground
+    args: ["-t"]
+    expectedError: ["Syntax OK"]
+  - name: config passes the syntax check with DOCROOT and project overrides set
+    command: bash
+    args: ["-c", "mkdir -p /tmp/overrides && DOCROOT=web APACHE_OVERRIDES_DIR=/tmp/overrides httpd-foreground -t"]
+    expectedError: ["Syntax OK"]
+  - name: Apache 2.4
+    command: httpd
+    args: ["-v"]
+    expectedOutput: ["Apache/2\\.4\\."]
+  - name: docksal/apache's extra modules are loaded
+    command: bash
+    args:
+      - -c
+      - >-
+        httpd-foreground -M 2>/dev/null
+        | grep -cE '^ (deflate|proxy|proxy_http|proxy_fcgi|proxy_connect|ssl|socache_shmcb|rewrite)_module '
+    expectedOutput: ["^8\\n?$"]
+  - name: workers run as www-data
+    command: grep
+    args: ["-E", "^User www-data$", "/usr/local/apache2/conf/httpd.conf"]
+    expectedOutput: ["User www-data"]
+  - name: logs go to stdout and stderr
+    command: bash
+    args: ["-c", "grep -E '^[[:space:]]*(ErrorLog|CustomLog) ' /usr/local/apache2/conf/httpd.conf"]
+    expectedOutput: ["ErrorLog /proc/self/fd/2", "CustomLog /proc/self/fd/1"]
+  - name: htpasswd, curl and openssl
+    command: bash
+    args: ["-c", "echo htpasswd curl openssl | xargs -n1 which >/dev/null && echo ALL_PRESENT"]
+    expectedOutput: ["ALL_PRESENT"]
+  - name: no private key ships in the image (httpd-foreground generates one at start)
+    command: bash
+    args: ["-c", "ls /usr/local/apache2/conf/server.key 2>/dev/null || echo ABSENT"]
+    expectedOutput: ["^ABSENT"]
+
+fileExistenceTests:
+  - name: entrypoint
+    path: /usr/local/bin/httpd-foreground
+    shouldExist: true
+    permissions: "-rwxr-xr-x"
+    uid: 0
+    gid: 0
+  - name: default vhosts
+    path: /usr/local/apache2/conf/extra/httpd-devcloud.conf
+    shouldExist: true
+  - name: shared vhost settings
+    path: /usr/local/apache2/conf/extra/includes/host.conf
+    shouldExist: true
+  - name: default runtime settings
+    path: /usr/local/apache2/conf/devcloud-runtime.conf
+    shouldExist: true
+
+fileContentTests:
+  - name: httpd.conf includes the runtime settings, then the vhosts
+    path: /usr/local/apache2/conf/httpd.conf
+    expectedContents: ["Include conf/devcloud-runtime.conf\\nInclude conf/extra/httpd-devcloud.conf"]

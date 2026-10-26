@@ -7,6 +7,7 @@
 #   make lint
 #   make build test scan IMAGE=php-devcloud PHP=8.4
 #   make build test scan IMAGE=ci-tools
+#   make build test scan IMAGE=httpd-devcloud
 SHELL       := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 
@@ -20,9 +21,12 @@ ifndef PLATFORM
 PLATFORM = $(eval PLATFORM := linux/$(shell $(DOCKER) version -f '{{.Server.Arch}}'))$(PLATFORM)
 endif
 
-ifeq ($(IMAGE),ci-tools)
-TARGET := ci-tools
-TAG    ?= local/ci-tools:dev
+# Images without a PHP matrix: one bake target each, named after the image (PHP is ignored).
+NON_PHP_IMAGES := ci-tools httpd-devcloud
+
+ifneq ($(filter $(IMAGE),$(NON_PHP_IMAGES)),)
+TARGET := $(IMAGE)
+TAG    ?= local/$(IMAGE):dev
 else
 TARGET := $(IMAGE)-$(subst .,-,$(PHP))
 TAG    ?= local/$(IMAGE):$(PHP)
