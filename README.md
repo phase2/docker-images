@@ -34,6 +34,8 @@ make repo-lint                                 # actionlint, gitleaks
 make build test scan IMAGE=php-devcloud PHP=8.4
 make build test scan IMAGE=php-ci PHP=8.5
 make build test scan IMAGE=ci-tools
+make build-all test-all scan-all               # every image: one bake call, then parallel tests/scans
+make build-all NO_CACHE=1                      # ...from scratch, like CI's weekly rebuild
 ```
 
 Prerequisites: Docker with buildx and [mise](https://mise.jdx.dev). `mise.toml` pins the host tools, `mise.lock` their checksums, and CI installs from the same files. hadolint, Trivy, actionlint and gitleaks run from digest-pinned images.
