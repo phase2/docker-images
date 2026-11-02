@@ -16,13 +16,13 @@ SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
 ARG TARGETARCH
 
 # renovate: datasource=github-releases depName=kubernetes/kubernetes extractVersion=^v(?<version>.*)$
-ARG KUBECTL_VERSION=1.37.1
+ARG KUBECTL_VERSION=1.37.2
 # renovate: datasource=github-releases depName=helm/helm extractVersion=^v(?<version>.*)$
 ARG HELM_VERSION=3.22.1
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize extractVersion=^kustomize/v(?<version>.*)$
 ARG KUSTOMIZE_VERSION=5.8.3
 # renovate: datasource=github-tags depName=aws/aws-cli
-ARG AWSCLI_VERSION=2.38.5
+ARG AWSCLI_VERSION=2.39.2
 
 COPY awscli.pubkey /tmp/awscli.pubkey
 

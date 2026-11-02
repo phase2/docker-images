@@ -40,7 +40,7 @@ EOF
 ARG NVM_VERSION=v0.40.8
 ARG NVM_COMMIT=a885b885fef16fac4bc544188fb25e9e37ae83e8
 # renovate: datasource=node-version depName=node versioning=node
-ARG NODE_VERSION=24.22.1
+ARG NODE_VERSION=24.22.2
 # renovate: datasource=npm depName=yarn
 ARG YARN_VERSION=1.22.22
 
