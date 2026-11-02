@@ -40,7 +40,7 @@ jobs:
           driver-opts: image=${{ env.BUILDKIT_IMAGE }}
           cache-binary: false
       # Host tools from mise.toml, verified against the checksums in mise.lock (--locked).
-      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install_args: shellcheck
       - name: hadolint, shellcheck, BuildKit checks
@@ -87,7 +87,7 @@ jobs:
           version: ${{ env.BUILDX_VERSION }}
           driver-opts: image=${{ env.BUILDKIT_IMAGE }}
           cache-binary: false
-      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
           install_args: container-structure-test
       - name: build
