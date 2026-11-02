@@ -5,7 +5,7 @@
 set -euo pipefail
 
 # renovate: datasource=github-releases depName=composer/composer
-COMPOSER_VERSION=2.10.3
+COMPOSER_VERSION=2.11.0
 
 cd /tmp
 curl -fsSL --retry 5 --retry-all-errors --proto '=https' -o composer.phar "https://getcomposer.org/download/${COMPOSER_VERSION}/composer.phar"
