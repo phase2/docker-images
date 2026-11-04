@@ -79,7 +79,7 @@ The Apache container next to php-devcloud in a devcloud pod; its [README](images
 
 ## Publishing
 
-`.github/workflows/images.yml` runs lint, then builds and tests every variant on native amd64 and arm64 runners. On `main`, the weekly schedule and manual runs it then publishes through [`docker/github-builder`](https://docs.docker.com/build/ci/github-actions/github-builder/). That adds an SBOM, SLSA provenance and signed attestations.
+`.github/workflows/images.yml` runs lint, then builds and tests every variant on native amd64 and arm64 runners. On `main`, the weekly schedule and manual runs it then publishes through [`docker/github-builder`](https://docs.docker.com/build/ci/github-actions/github-builder/). That adds an SBOM, SLSA provenance and signed attestations. Every publish builds without cache, and merges that touch only docs or Renovate config don't publish.
 
 - **Required check.** The `ci` job passes only when lint and every test variant pass. Make it the one required status check on `main`; the test jobs' names come from `docker-bake.hcl`, so they can't be listed individually.
 - **Code scanning.** Each test job uploads Trivy's fixable HIGH/CRITICAL findings, including vendored npm, Go and PHP dependencies, to the repository's code scanning alerts, one category per variant and architecture. Pull requests from forks skip the upload.
