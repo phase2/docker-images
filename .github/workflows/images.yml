@@ -1,11 +1,19 @@
 # Lint -> test (every variant on amd64 and arm64) -> publish (multi-arch, SBOM, provenance, signing).
 # Every action is pinned by full commit SHA (version in the trailing comment); Renovate keeps
-# them current. The weekly run rebuilds without cache so Debian security fixes land hands-off.
+# them current. Publishing never uses a build cache, and the weekly run rebuilds so Debian security
+# fixes land hands-off.
 name: images
 
 on:
   push:
     branches: [main]
+    # Files no image is built from. A publish rebuilds every layer, so skip merges that touch only these.
+    paths-ignore:
+      - "**/*.md"
+      - ".claude/**"
+      - LICENSE
+      - renovate.json
+      - skills-lock.json
   pull_request:
   schedule:
     - cron: "0 16 * * 0" # weekly rebuild + rescan
@@ -156,9 +164,9 @@ jobs:
       target: ${{ matrix.variant.target }}
       files: docker-bake.hcl
       sbom: true
-      # The weekly run rebuilds from scratch so apt picks up Debian security updates.
-      cache: ${{ github.event_name != 'schedule' }}
-      cache-scope: ${{ matrix.variant.target }}
+      # No build cache. The weekly run can't refresh it, so a later cached publish would reuse apt
+      # layers from before that rebuild and ship older Debian packages.
+      cache: false
       meta-images: ghcr.io/${{ github.repository_owner }}/${{ matrix.variant.image }}
       meta-tags: |
         type=raw,value=${{ matrix.variant.channel }}
