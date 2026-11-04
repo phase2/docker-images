@@ -73,7 +73,7 @@ The Apache container next to php-devcloud in a devcloud pod; its [README](images
 - **Debian packages** come in through the weekly scheduled rebuild (no cache) and are gated on Trivy. httpd-devcloud runs `apt-get upgrade` on top of the official `httpd` image for the same effect.
 - **Apache** is the `httpd:2.4.x-trixie` tag in `images/httpd-devcloud/Dockerfile`; Renovate bumps it within 2.4.
 - **Tool versions** are `ARG`s (or variables in the `images/_shared/*.sh` scripts) with `# renovate:` comments.
-  - Renovate opens the bump PRs early on Sunday (UTC). Patch and minor bumps auto-merge on green CI, ahead of the 16:00 UTC weekly rebuild. The self-hosted runner AMI (`phase2/phase2-github-runners`) pre-pulls the images at 21:00 UTC, so it starts the week matching GHCR.
+  - Renovate opens the bump PRs early on Saturday (UTC). Patch and minor bumps auto-merge on green CI, ahead of the Sunday 16:00 UTC weekly rebuild. The self-hosted runner AMI (`phase2/phase2-github-runners`) pre-pulls the images at 21:00 UTC, so it starts the week matching GHCR.
   - Builds verify each download against the checksum file its project publishes.
 - **Breaking changes** to `ci-tools` (a removed tool, for example) bump `CI_TOOLS_MAJOR` in `docker-bake.hcl`; CI reads the variants and their tags from there. They are recorded in `CHANGELOG.md`.
 

@@ -6,7 +6,7 @@
     ":semanticCommits"
   ],
   "labels": ["dependencies"],
-  "schedule": ["before 6am on sunday"],
+  "schedule": ["before 6am on saturday"],
   "minimumReleaseAge": "3 days",
   "vulnerabilityAlerts": { "enabled": true, "schedule": ["at any time"] },
   "customManagers": [
