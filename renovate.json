@@ -7,6 +7,7 @@
   ],
   "labels": ["dependencies"],
   "schedule": ["before 6am on saturday"],
+  "automergeSchedule": ["on saturday", "before 4pm on sunday"],
   "minimumReleaseAge": "3 days",
   "vulnerabilityAlerts": { "enabled": true, "schedule": ["at any time"] },
   "customManagers": [
