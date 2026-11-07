@@ -39,7 +39,7 @@ TAG    ?= local/$(IMAGE):$(PHP)
 endif
 
 BUILDX         := $(DOCKER) buildx $(if $(BUILDER),--builder $(BUILDER))
-BUILDKIT_IMAGE := moby/buildkit:v0.34.1
+BUILDKIT_IMAGE := moby/buildkit:v0.34.2
 HADOLINT_IMAGE := ghcr.io/hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
 TRIVY_IMAGE    := ghcr.io/aquasecurity/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
 ACTIONLINT_IMAGE := docker.io/rhysd/actionlint:1.7.12@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
