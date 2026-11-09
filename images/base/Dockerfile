@@ -27,7 +27,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-update-retry
 # apt-get upgrade: trixie-slim's own packages only refresh when Docker Hub rebuilds the tag, so the
 # weekly rebuild applies Debian security fixes itself (Trivy gates the result).
-apt-get upgrade -y
+apt-get upgrade --with-new-pkgs -y
 apt-get install -y --no-install-recommends \
   bash-completion ca-certificates curl git git-lfs gnupg jq less nano openssh-client patch perl \
   procps rsync tini unzip xz-utils zip zstd
