@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 export DEBIAN_FRONTEND=noninteractive
 echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
 apt-get update
-apt-get upgrade -y
+apt-get upgrade --with-new-pkgs -y
 apt-get install -y --no-install-recommends curl openssl
 conf=/usr/local/apache2/conf
 # The modules docksal/apache enables; project overrides rely on them.
