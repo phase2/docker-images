@@ -30,7 +30,9 @@ encodes it.
 ## Intentional choices (keep them)
 
 - The Debian base (`debian:trixie-slim`) and apt packages stay unpinned: the weekly no-cache
-  rebuild picks up security fixes and Trivy gates it. Hence hadolint DL3008 is ignored.
+  rebuild picks up security fixes and Trivy gates it. Hence hadolint DL3008 is ignored. base runs
+  `apt-get upgrade`: without it, packages trixie-slim ships keep its versions until Docker Hub
+  rebuilds the tag, and a fixed CVE in them fails the Trivy gate.
 - Every PHP version, 8.4 included, comes from packages.sury.org even though Debian ships 8.4:
   extensions match across versions and a Debian upgrade changes no PHP. The apt pin in
   `install-php.sh` is an origin pin (prefer sury for `php*`), not a version pin; the shared

@@ -25,6 +25,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries
 export DEBIAN_FRONTEND=noninteractive
 apt-update-retry
+# apt-get upgrade: trixie-slim's own packages only refresh when Docker Hub rebuilds the tag, so the
+# weekly rebuild applies Debian security fixes itself (Trivy gates the result).
+apt-get upgrade -y
 apt-get install -y --no-install-recommends \
   bash-completion ca-certificates curl git git-lfs gnupg jq less nano openssh-client patch perl \
   procps rsync tini unzip xz-utils zip zstd
