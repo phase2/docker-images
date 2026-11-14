@@ -7,7 +7,7 @@
 
 # The official Apache 2.4 image on Debian trixie. Renovate bumps the 2.4.x tag; the weekly
 # no-cache rebuild picks up upstream's rebuilds of it.
-ARG HTTPD_IMAGE=docker.io/library/httpd:2.4.69-trixie
+ARG HTTPD_IMAGE=docker.io/library/httpd:2.4.70-trixie
 
 FROM ${HTTPD_IMAGE}
 SHELL ["/bin/bash", "-euo", "pipefail", "-c"]
