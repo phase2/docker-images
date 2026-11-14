@@ -48,7 +48,7 @@ jobs:
           driver-opts: image=${{ env.BUILDKIT_IMAGE }}
           cache-binary: false
       # Host tools from mise.toml, verified against the checksums in mise.lock (--locked).
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: shellcheck
       - name: hadolint, shellcheck, BuildKit checks
@@ -95,7 +95,7 @@ jobs:
           version: ${{ env.BUILDX_VERSION }}
           driver-opts: image=${{ env.BUILDKIT_IMAGE }}
           cache-binary: false
-      - uses: jdx/mise-action@f5be966e4a917d54244728e6a5fdcd1d93a35e6c # v5.2.6
+      - uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
         with:
           install_args: container-structure-test
       - name: build
@@ -115,7 +115,7 @@ jobs:
           path: ${{ env.REPORT }}
           if-no-files-found: ignore
       # Code scanning, one category per variant and arch. Fork PRs get a read-only token, so skip them.
-      - uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         if: >-
           always() && hashFiles(env.REPORT) != '' &&
           (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
@@ -153,7 +153,7 @@ jobs:
       fail-fast: false
       matrix:
         variant: ${{ fromJSON(needs.lint.outputs.variants) }}
-    uses: docker/github-builder/.github/workflows/bake.yml@cbc9d42f8c89a55623392aadd03600965b80e963 # v1.18.1
+    uses: docker/github-builder/.github/workflows/bake.yml@a31d2311da4d55e21b978c1c52bab82ba97d51ee # v1.19.0
     permissions:
       contents: read
       packages: write # push to ghcr.io
