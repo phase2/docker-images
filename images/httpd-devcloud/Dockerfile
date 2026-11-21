@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 # check=error=true
 #
 # httpd-devcloud: the Apache web container of devcloud preview pods. Serves the docroot of the

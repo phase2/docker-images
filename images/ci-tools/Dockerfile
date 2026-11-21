@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 # check=error=true
 #
 # ci-tools: general CI job container (GitHub Actions `container:` on self-hosted runners).
