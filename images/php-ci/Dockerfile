@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 # check=error=true
 #
 # php-ci: PHP CI job container. ci-tools + PHP CLI and Composer. Runs as uid 1000, no sudo.

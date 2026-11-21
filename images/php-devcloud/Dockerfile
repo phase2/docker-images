@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.29
 # check=error=true
 #
 # php-devcloud: the PHP-FPM sidecar of devcloud preview pods. base + PHP CLI/FPM, Composer,
