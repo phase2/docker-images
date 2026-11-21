@@ -40,10 +40,10 @@ EOF
 # nvm is pinned by tag and commit (it publishes no checksum file). `nvm install` verifies
 # every Node.js tarball against nodejs.org's SHASUMS256.txt.
 # renovate-digest: datasource=github-tags depName=nvm-sh/nvm
-ARG NVM_VERSION=v0.40.8
-ARG NVM_COMMIT=a885b885fef16fac4bc544188fb25e9e37ae83e8
+ARG NVM_VERSION=v0.41.0
+ARG NVM_COMMIT=4e8758a801eea9479b32a904f31093e410ddaba4
 # renovate: datasource=node-version depName=node versioning=node
-ARG NODE_VERSION=24.22.2
+ARG NODE_VERSION=24.22.3
 # renovate: datasource=npm depName=yarn
 ARG YARN_VERSION=1.22.22
 
