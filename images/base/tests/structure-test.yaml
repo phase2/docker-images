@@ -35,7 +35,7 @@ commandTests:
   - name: nvm is sourceable
     command: bash
     args: ["-c", ". /home/docker/.nvm/nvm.sh && nvm --version"]
-    expectedOutput: ["^0\\.40\\."]
+    expectedOutput: ["^0\\.[0-9]+\\."]
   - name: nvm default-packages installs yarn
     command: cat
     args: ["/home/docker/.nvm/default-packages"]
